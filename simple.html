@@ -1,0 +1,231 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>quadtree-js Simple Demo</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+
+<body>
+    <div class="outer">
+        <div id="canvasContainer">
+            <canvas id="canvas" width="640" height="480"></canvas>
+        </div>
+        <p></p>
+        <p>*Mẹo: Mở Console của trình duyệt để xem kết quả (nhấn F12)</p>
+        <p>> Khởi tạo quadtree:</p>
+        <div class="ctrl">
+
+            <div class="ctrl-left">
+                <input type="file" name="inputfile" id="inputfile">
+                <button id="btn_add_big">Run QuadTree</button>
+                <!-- <button id="btn_clear">clear tree</button> -->
+            </div>
+
+            <div class="ctrl-right">
+                Total Objects: <span id="cnt_total">0</span><br />
+            </div>
+        </div>
+        <p>> Tìm các điểm gần với tọa độ cho trước:</p>
+        x: <input id="x"></input>,
+        y: <input id="y"></input>
+        <button id="btn_retrive">drawRetrieve</button>
+
+        <p>> Tìm biên:</p>
+        <button id="btn_edge">Draw Edge</button>
+        <button id="btn_saveEdgePoints">Save Edge Points to File</button>
+
+        <p>> Loại các điểm không thỏa điều kiện về góc lệch:</p>
+        <p>+ Tìm k điểm gần lân cận của từng điểm trong tập điểm biên:</p>
+        k: <input id="k"></input>
+        <button id="btn_knn">Find</button>
+        <button id="btn_angles">Tính góc và sắp xếp</button>
+        <p>+ Lọc các điểm theo góc lệch giữa các lân cận</p>
+        Ngưỡng: <input id="threshold"></input>
+        <button id="btn_filter">Filter</button>
+        <button id="btn_saveFilteredEdgePoints">Save Filtered Edge Points to File</button>
+
+        <script src="quadtree.js"></script>
+        <script src="process.js"></script>
+        <script src="filterPointsByAngle.js"></script>
+        <script>
+            // Global variables
+            // step 2
+            var edgeNodes;
+            var edgePoints;
+
+            // step 3
+            var knnLists;
+            var angles;
+            var filteredEdgePoints;
+
+            // Script
+            document.getElementById('inputfile').addEventListener('change', function () {
+                var fr = new FileReader();
+
+                //Đọc dữ liệu từ file txt
+                fr.onload = function () {
+                    var line = fr.result;
+                    var array = line.split("\n");
+
+                    for (var i = 0; i < array.length; i++) {
+                        var lineData = array[i].split(" ");
+
+                        var object = new Object();
+                        object.x = lineData[0];
+                        object.y = lineData[1];
+                        dataFromFile.push(object);
+                    }
+
+                }
+
+                fr.readAsText(this.files[0]);
+            });
+            //Kết thúc đọc dữ liệu
+
+
+            //set eventListener for buttons
+
+            document.getElementById('btn_add_big').addEventListener('click', function () {
+                if (dataFromFile.length == 0) alert('Chưa nạp file điểm');
+
+                if (dataFromFile.length > 0) {
+                    drawLevel_1(dataFromFile);
+
+                    mainQTree(dataFromFile);
+
+                    for (var i = 0; i < dataFromFile.length; i++) {
+                        var object = dataFromFile[i];
+
+                        var xtmp = parseInt(object.x);
+                        var ytmp = parseInt(object.y);
+
+                        var point = {
+                            x: xtmp,
+                            y: ytmp,
+                            width: 1,
+                            height: 1,
+                            check: false
+                        };
+
+                        handleAddPoint(point);
+
+                    }
+                }
+
+                loop();
+
+                console.log('>> Quadtree:');
+                console.log(myTree);
+            });
+
+            document.getElementById("btn_retrive").addEventListener('click', function () {
+                const points = drawRetrieve();
+
+            });
+
+            document.getElementById('btn_edge').addEventListener('click', function () {
+                if (!myTree) alert('Chưa tạo quadtree!');
+
+                edgeNodes = findBoundary(myTree);
+
+                console.log('\n>> Các node biên:');
+                console.log(edgeNodes);
+
+                edgePoints = [];
+                var containsPoint = function (obj, list) {
+                    for (var i = 0; i < list.length; i++) {
+                        if ((list[i].x == obj.x) && (list[i].y == obj.y)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+                edgeNodes.forEach(node => {
+                    node.objects.forEach(point => {
+                        if (!containsPoint({ x: point.x, y: point.y }, edgePoints))
+                            edgePoints.push({ x: point.x, y: point.y });
+                    });
+                });
+
+                console.log('\n>> Các điểm biên:');
+                console.log(edgePoints);
+            });
+
+            //document.getElementById('btn_clear').addEventListener('click', handleClear(window.myObjects, window.myTree));
+
+            function download(data, filename, type) {
+                var file = new Blob([data], { type: type });
+                if (window.navigator.msSaveOrOpenBlob) // IE10+
+                    window.navigator.msSaveOrOpenBlob(file, filename);
+                else { // Others
+                    var a = document.createElement("a"),
+                        url = URL.createObjectURL(file);
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(function () {
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                    }, 0);
+                }
+            }
+
+            document.getElementById('btn_saveEdgePoints').addEventListener('click', () => {
+                if (!edgeNodes) alert('Chưa tìm các node biên!');
+                var data = '';
+                edgeNodes.forEach(node => {
+                    node.objects.forEach(point => {
+                        data += point.x + ' ' + point.y + '\n';
+                    });
+                });
+                download([data], 'edge_points.txt', 'text/plain');
+            });
+
+            document.getElementById('k').defaultValue = "6";
+            document.getElementById('btn_knn').addEventListener('click', () => {
+                var k = parseInt(document.getElementById("k").value);
+                if (isNaN(k) || k < 1) alert('k không hợp lệ. Vui lòng nhập lại k.');
+                knnLists = findKNN(edgePoints, 6);
+                console.log('\n>> Chỉ số k điểm lân cận của các điểm biên trong mảng các điểm biên:');
+                console.log(knnLists, k);
+            });
+
+            document.getElementById('btn_angles').addEventListener('click', () => {
+                angles = calAngle(edgePoints, knnLists);
+                console.log('\n>> Góc giữa pi và p0 đã sắp xếp, kèm với chỉ số của điểm pi trong tập điểm biên:');
+                console.log(angles);
+            });
+
+            document.getElementById('threshold').defaultValue = "100";
+            document.getElementById('btn_filter').addEventListener('click', () => {
+                var threshold = parseInt(document.getElementById("threshold").value);
+                var angDevs = calAngleDevitation(angles);
+                console.log('\n>> Góc lệch giữa các lân cận của từng điểm biên:');
+                console.log(angDevs);
+
+                filteredEdgePoints = filterEdgePoints(edgePoints, angDevs, threshold)
+                console.log('\n>> Các điểm biên được chọn:');
+                console.log(filteredEdgePoints);
+				
+				filteredEdgePoints.forEach(point => {
+					ctx.fillStyle = '#000000';
+					ctx.fillRect(point.x, point.y, 2, 2);
+				});
+            });
+
+            document.getElementById('btn_saveFilteredEdgePoints').addEventListener('click', () => {
+                if (!filteredEdgePoints) alert('Chưa lọc các node biên!');
+                var data = '';
+                filteredEdgePoints.forEach(point => {
+                    data += point.x + ' ' + point.y + '\n';
+                });
+                download([data], 'filtered_edge_points.txt', 'text/plain');
+            });
+
+        </script>
+</body>
+
+</html>
