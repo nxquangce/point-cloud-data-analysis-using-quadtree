@@ -32,8 +32,8 @@
         y: <input id="y"></input>
         <button id="btn_retrive">drawRetrieve</button>
 
-        <p>> Tìm biên:</p>
-        <button id="btn_edge">Draw Edge</button>
+        <p>> Tìm node biên:</p>
+        <button id="btn_edge">Draw Edge Nodes</button>
         <button id="btn_saveEdgePoints">Save Edge Points to File</button>
 
         <p>> Loại các điểm không thỏa điều kiện về góc lệch:</p>
@@ -46,9 +46,20 @@
         <button id="btn_filter">Filter</button>
         <button id="btn_saveFilteredEdgePoints">Save Filtered Edge Points to File</button>
 
+        <p>> Tìm đường biên:</p>
+        Số ô theo phương ngang: <input id="hCell"></input>
+        Số ô theo phương dọc: <input id="vCell"></input>
+        <p></p>
+        Ngưỡng loại bỏ ô: <input id="pointCellThreshold"></input>
+        <button id="btn_edgeLine">Tìm đường biên</button>
+
+
+        <div class="padding-bottom"></div>
+
         <script src="quadtree.js"></script>
         <script src="process.js"></script>
         <script src="filterPointsByAngle.js"></script>
+        <script src="findEdgeLine.js"></script>
         <script>
             // Global variables
             // step 2
@@ -59,6 +70,11 @@
             var knnLists;
             var angles;
             var filteredEdgePoints;
+
+            // step 4
+            var cells;
+            var rawLines;
+            var adjustedLines;
 
             // Script
             document.getElementById('inputfile').addEventListener('change', function () {
@@ -209,11 +225,11 @@
                 filteredEdgePoints = filterEdgePoints(edgePoints, angDevs, threshold)
                 console.log('\n>> Các điểm biên được chọn:');
                 console.log(filteredEdgePoints);
-				
-				filteredEdgePoints.forEach(point => {
-					ctx.fillStyle = '#000000';
-					ctx.fillRect(point.x, point.y, 2, 2);
-				});
+
+                filteredEdgePoints.forEach(point => {
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(point.x, point.y, 2, 2);
+                });
             });
 
             document.getElementById('btn_saveFilteredEdgePoints').addEventListener('click', () => {
@@ -223,6 +239,67 @@
                     data += point.x + ' ' + point.y + '\n';
                 });
                 download([data], 'filtered_edge_points.txt', 'text/plain');
+            });
+
+            // Step 4
+            document.getElementById('hCell').defaultValue = "8";
+            document.getElementById('vCell').defaultValue = "8";
+            document.getElementById('pointCellThreshold').defaultValue = "1";
+            document.getElementById('btn_edgeLine').addEventListener('click', () => {
+                // Vẽ lại các điểm đã lọc
+                ctx.clearRect(0, 0, window.maxX, window.maxY);
+                filteredEdgePoints.forEach(point => {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(point.x, point.y, 2, 2);
+                });
+
+                // Chia vùng chứa điểm biên thành các cell nhỏ
+                var hCell = parseInt(document.getElementById("hCell").value);
+                var vCell = parseInt(document.getElementById("vCell").value);
+                cells = splitRegion(myTree, filteredEdgePoints, hCell, vCell);
+
+                // Vẽ cell
+                cells.forEach(cell => {
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.strokeRect(cell.left, cell.top, (cell.right - cell.left), (cell.bottom - cell.top));
+                });
+
+                // Bình phương cực tiểu
+                var pointCellThreshold = parseInt(document.getElementById("pointCellThreshold").value);
+                rawLines = [];
+                cells.forEach(cell => {
+                    if (cell.points.length > pointCellThreshold) {
+                        var line = leastSquares(cell);
+                        rawLines.push(line);
+                    }
+                });
+                console.log('\n>> Các đường tìm được bằng bình phương cực tiểu:');
+                console.log('Số cell: ' + hCell + ' x ' + vCell);
+                console.log('Số điểm để loại cell: ' + pointCellThreshold);
+                console.log(rawLines);
+
+                // Vẽ line chưa điều chỉnh
+                rawLines.forEach(line => {
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.moveTo(line.p1.x, line.p1.y);
+                    ctx.lineTo(line.p2.x, line.p2.y);
+                    ctx.stroke();
+                });
+
+                // Điều chỉnh các line
+                adjustedLines = adjustLines(rawLines);
+                console.log('\n>> Các đường đã điều chỉnh:');
+                console.log(adjustedLines);
+
+                // Vẽ line đã điều chỉnh
+                adjustedLines.forEach(line => {
+                    ctx.strokeStyle = '#ffff00';
+                    ctx.beginPath();
+                    ctx.moveTo(line.p1.x, line.p1.y);
+                    ctx.lineTo(line.p2.x, line.p2.y);
+                    ctx.stroke();
+                });
             });
 
         </script>
