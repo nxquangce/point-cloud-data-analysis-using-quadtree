@@ -3,6 +3,8 @@
 This is a master project in civil engineering with supporting from computer engineering field.  
 The target is to get the structure of a construction from point cloud scanned by a Terrestrial Laser Scanning TLS device in order for 3D rendering.  
 
+See demo (Github Page): https://nxquangce.github.io/point-cloud-data-analysis-using-quadtree/
+
 ## Algorithm
 Input: set of point cloud in 2D  
 Processing:  
