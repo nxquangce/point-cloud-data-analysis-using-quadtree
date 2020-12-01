@@ -215,7 +215,7 @@
                 console.log(angles);
             });
 
-            document.getElementById('threshold').defaultValue = "100";
+            document.getElementById('threshold').defaultValue = "30";
             document.getElementById('btn_filter').addEventListener('click', () => {
                 var threshold = parseInt(document.getElementById("threshold").value);
                 var angDevs = calAngleDevitation(angles);
@@ -242,8 +242,8 @@
             });
 
             // Step 4
-            document.getElementById('hCell').defaultValue = "8";
-            document.getElementById('vCell').defaultValue = "8";
+            document.getElementById('hCell').defaultValue = "6";
+            document.getElementById('vCell').defaultValue = "4";
             document.getElementById('pointCellThreshold').defaultValue = "1";
             document.getElementById('btn_edgeLine').addEventListener('click', () => {
                 // Vẽ lại các điểm đã lọc
