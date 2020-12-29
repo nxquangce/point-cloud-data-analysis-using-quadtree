@@ -50,6 +50,12 @@
         Số ô theo phương ngang: <input id="hCell"></input>
         Số ô theo phương dọc: <input id="vCell"></input>
         <p></p>
+        Phương pháp:
+        <select id="method">
+            <option value="1">Bình phương cực tiểu</option>
+            <option value="2">Ransac (Random Sample Consensus)</option>
+        </select>
+        <p></p>
         Ngưỡng loại bỏ ô: <input id="pointCellThreshold"></input>
         <button id="btn_edgeLine">Tìm đường biên</button>
 
@@ -264,16 +270,31 @@
                     ctx.strokeRect(cell.left, cell.top, (cell.right - cell.left), (cell.bottom - cell.top));
                 });
 
-                // Bình phương cực tiểu
+                // Hồi quy
+                var method = parseInt(document.getElementById("method").vlue);
+
                 var pointCellThreshold = parseInt(document.getElementById("pointCellThreshold").value);
                 rawLines = [];
-                cells.forEach(cell => {
-                    if (cell.points.length > pointCellThreshold) {
-                        var line = leastSquares(cell);
-                        rawLines.push(line);
-                    }
-                });
-                console.log('\n>> Các đường tìm được bằng bình phương cực tiểu:');
+                if (method == 1) {
+                    // Bình phương cực tiểu
+                    cells.forEach(cell => {
+                        if (cell.points.length > pointCellThreshold) {
+                            var line = leastSquares(cell);
+                            rawLines.push(line);
+                        }
+                    });
+                    console.log('\n>> Các đường tìm được bằng bình phương cực tiểu:');
+                }
+                else {
+                    // Ransac
+                    cells.forEach(cell => {
+                        if (cell.points.length > pointCellThreshold) {
+                            var line = ransac(cell);
+                            rawLines.push(line);
+                        }
+                    });
+                    console.log('\n>> Các đường tìm được bằng ransac:');
+                }
                 console.log('Số cell: ' + hCell + ' x ' + vCell);
                 console.log('Số điểm để loại cell: ' + pointCellThreshold);
                 console.log(rawLines);

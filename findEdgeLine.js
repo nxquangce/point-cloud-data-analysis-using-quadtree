@@ -138,6 +138,78 @@ function leastSquares(cell) {
 }
 
 /**
+ * Ransac
+ * @param {*} cell 
+ * @param {*} threshold 
+ * @param {*} maxLoop 
+ */
+function ransac(cell, threshold = 10, maxLoop = 500) {
+    var count = 0, best = {}, bestCnt = 0;
+
+    // Random
+    // for (var i = 0; i < maxLoop; ++i) {
+    //     // Select two points and fit the model.
+    //     var getRandomInt = function (min, max) {
+    //         min = Math.ceil(min);
+    //         max = Math.floor(max);
+    //         return Math.floor(Math.random() * (max - min + 1)) + min;
+    //     }
+    //     var i0 = getRandomInt(0, cell.points.length - 1);
+    //     var i1 = getRandomInt(0, cell.points.length - 1);
+
+    //     while (i1 == i0) {
+    //         i1 = getRandomInt(0, cell.points.length - 1);
+    //     }
+    //     var selectedP0 = cell.points[i0], selectedP1 = cell.points[i1];
+
+
+    // Consider all pairs
+    cell.points.forEach((selectedP0, i0) => {
+        cell.points.forEach((selectedP1, i1) => {
+            if (i0 == i1) return;
+
+            // Compute the parameters of the line.
+            var slope = (selectedP1.y - selectedP0.y) / (selectedP1.x - selectedP0.x);
+            a = -1.0;
+            b = 1.0 / slope;
+            c = selectedP0.x - selectedP0.y / slope;
+
+            // Count the number of points that fit the model.
+            count = 0;
+            for (var i = 0; i < cell.points.length; ++i) {
+                var point = cell.points[i];
+                var disttance = Math.abs(a * point.x + b * point.y + c) / Math.sqrt(a * a + b * b);
+                if (disttance < threshold) {
+                    count++;
+                }
+            }
+
+            // If more points were classified, break.
+            if (bestCnt < count) {
+                bestCnt = count;
+                best.a = a;
+                best.b = b;
+                best.c = c;
+            }
+        });
+    });
+
+    var a = - best.a / best.b;
+    var b = - best.c / best.b;
+    var [p1, p2] = findLineNodes(cell, a, b);
+
+    var line = {
+        cell: cell,
+        a: a,
+        b: b,
+        p1: p1,
+        p2: p2
+    }
+
+    return line;
+}
+
+/**
  * Điều chỉnh các đường thẳng cho liền nhau
  * @param {*} rawLines 
  */
